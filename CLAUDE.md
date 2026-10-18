@@ -31,13 +31,26 @@ choices (colors, sounds, names); Josh types the code.
   CircuitPython. Reinstall by dragging the CircuitPython .uf2 onto the BOOT drive.
 
 ## Repo layout
-cpx-projects/
-  CLAUDE.md
-  deploy.sh              # deploy.sh <project> copies code.py to the board
-  projects/NN-name/code.py + README.md
-  launcher/code.py + game_*.py
+circuit-playground-projects/
+  CLAUDE.md, README.md
+  deploy.sh              # deploy.sh <NN|name|launcher>; also copies shared/*.py
+  deploy.cmd             # same, from PowerShell: .\deploy 01
+  shared/common.py       # pressed(), wants_exit(), exit_held(), beep()
+  launcher/code.py       # menu; GAMES list of (module, color, tone)
+  projects/NN-name/game_name.py + code.py + README.md
+Each game lives once, in projects/NN-name/game_name.py, with a run() that
+returns on A+B (common.wants_exit). code.py there just runs it standalone;
+`deploy.sh launcher` copies every projects/*/game_*.py.
 Launcher: button A = next game, B = start, A+B = exit. Import games lazily
-and call gc.collect() (RAM is limited).
+and call gc.collect() (RAM is limited). Kid-editable settings go at the top
+of game_*.py; game state goes inside run().
+New game: add a project folder, then one line in GAMES.
+
+## Shells
+The Claude desktop Terminal panel opens PowerShell, which can't run .sh
+files (it hands them to the file association). Josh uses `.\deploy`
+there; Claude's Bash tool is Git Bash and uses ./deploy.sh. gh lives in
+C:\Program Files\GitHub CLI (added to PATH in ~/.bashrc).
 
 ## Project ideas
 Easy: shake-a-rainbow wand, hide-the-light nightlight, color mixer,

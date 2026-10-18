@@ -3,8 +3,9 @@
 #
 #   ./deploy.sh 01            # matches projects/01-*
 #   ./deploy.sh 02-fruit-piano
-#   ./deploy.sh launcher
+#   ./deploy.sh launcher      # menu + every projects/*/game_*.py
 #
+# shared/*.py (helpers every game imports) is copied every time.
 # Only code.py and project .py modules are written. Nothing on the board is
 # ever deleted (lib/, boot_out.txt, settings.toml stay untouched).
 # Set CIRCUITPY to override the board path (default: /d, or /mnt/d on WSL).
@@ -51,9 +52,19 @@ if [ ! -f "$src/code.py" ]; then
     exit 1
 fi
 
-for f in "$src"/*.py; do
+files=(shared/*.py "$src"/*.py)
+if [ "$src" = "launcher" ]; then
+    files+=(projects/*/game_*.py)
+fi
+
+# code.py goes last: the board restarts as soon as it changes, so every
+# module it imports should already be there.
+for f in "${files[@]}"; do
+    [ "$(basename "$f")" = "code.py" ] && continue
     cp "$f" "$CIRCUITPY/"
     echo "copied $(basename "$f")"
 done
+cp "$src/code.py" "$CIRCUITPY/"
+echo "copied code.py"
 sync
 echo "Deployed $src. The board restarts on its own."
