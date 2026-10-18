@@ -79,7 +79,8 @@ Details and how to add a game: [launcher/README.md](launcher/README.md).
 | 00 | [hello](projects/00-hello) | (not in menu) | First test: buttons change colors, shake for a rainbow |
 | 01 | [wand](projects/01-wand) | purple | Shake to cast spells, A picks the spell |
 | 02 | [fruit-piano](projects/02-fruit-piano) | green | Touch pads (or fruit!) play notes |
-| 03 | [dice](projects/03-dice) | orange | Shake to roll, then count the lights |
+| 03 | [dice](projects/03-dice) | yellow | Shake to roll, then count the lights |
+| 04 | [halloween](projects/04-halloween) | pumpkin orange | Spooky jukebox with matching lights; shake for lightning, touch for BOO, cover for eyes |
 
 The settings each kid can change (colors, sounds) are at the top of each
 game's `game_*.py`.

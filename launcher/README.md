@@ -21,7 +21,8 @@ shared helper and every `projects/*/game_*.py`.
 |---|---|---|
 | 1 | [Wand](../projects/01-wand) | purple |
 | 2 | [Fruit piano](../projects/02-fruit-piano) | green |
-| 3 | [Dice](../projects/03-dice) | orange |
+| 3 | [Dice](../projects/03-dice) | yellow |
+| 4 | [Halloween](../projects/04-halloween) | pumpkin orange |
 
 If a game crashes, the board flashes red, beeps low, and returns to the menu.
 The error is printed to the serial console.

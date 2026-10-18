@@ -10,7 +10,7 @@ number one pixel at a time, with a beep for each one so you can count out loud.
 | A+B together | Back to the menu (when started from the launcher) |
 | Slide switch | Sound on / off |
 
-In the launcher, the dice are game 3 (orange).
+In the launcher, the dice are game 3 (yellow).
 
 ## Kid's choices (top of `game_dice.py`)
 - `NUMBER_COLORS`: a color for each number

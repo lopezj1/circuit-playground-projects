@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 .venv/
 .vscode/
+
+# Private song files: may hold copyrighted melodies, never publish them.
+halloween_songs.py

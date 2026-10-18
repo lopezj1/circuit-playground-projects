@@ -3,7 +3,7 @@
 #
 #   ./deploy.sh 01            # matches projects/01-*
 #   ./deploy.sh 02-fruit-piano
-#   ./deploy.sh launcher      # menu + every projects/*/game_*.py
+#   ./deploy.sh launcher      # menu + every game and its helper files
 #
 # shared/*.py (helpers every game imports) is copied every time.
 # Only code.py and project .py modules are written. Nothing on the board is
@@ -54,13 +54,17 @@ fi
 
 files=(shared/*.py "$src"/*.py)
 if [ "$src" = "launcher" ]; then
-    files+=(projects/*/game_*.py)
+    # Every game plus its helper files (like a private halloween_songs.py).
+    files+=(projects/*/*.py)
 fi
 
 # code.py goes last: the board restarts as soon as it changes, so every
-# module it imports should already be there.
+# module it imports should already be there. *_example.py files are
+# templates for the repo, not for the board.
 for f in "${files[@]}"; do
-    [ "$(basename "$f")" = "code.py" ] && continue
+    case "$(basename "$f")" in
+        code.py | *_example.py) continue ;;
+    esac
     cp "$f" "$CIRCUITPY/"
     echo "copied $(basename "$f")"
 done

@@ -17,7 +17,8 @@ import common
 GAMES = [
     ("game_wand", (150, 0, 255), 523),    # purple
     ("game_piano", (0, 255, 0), 659),     # green
-    ("game_dice", (255, 120, 0), 784),    # orange
+    ("game_dice", (255, 200, 0), 784),    # yellow
+    ("game_halloween", (255, 80, 0), 392),  # pumpkin orange
 ]
 BRIGHTNESS = 0.2
 # ----------------------------------------------------------------------------

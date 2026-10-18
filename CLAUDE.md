@@ -40,7 +40,14 @@ circuit-playground-projects/
   projects/NN-name/game_name.py + code.py + README.md
 Each game lives once, in projects/NN-name/game_name.py, with a run() that
 returns on A+B (common.wants_exit). code.py there just runs it standalone;
-`deploy.sh launcher` copies every projects/*/game_*.py.
+`deploy.sh launcher` copies every projects/*/*.py except code.py and
+*_example.py (templates stay in the repo only).
+
+## Copyrighted songs
+The repo is public. Never write copyrighted melodies (movie/pop songs) into
+committed files. They go in projects/04-halloween/halloween_songs.py, which
+is gitignored and typed in by Josh; halloween_songs_example.py is the
+committed template. Built-in songs must be public domain.
 Launcher: button A = next game, B = start, A+B = exit. Import games lazily
 and call gc.collect() (RAM is limited). Kid-editable settings go at the top
 of game_*.py; game state goes inside run().
