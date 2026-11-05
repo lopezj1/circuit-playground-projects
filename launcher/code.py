@@ -19,6 +19,7 @@ GAMES = [
     ("game_piano", (0, 255, 0), 659),     # green
     ("game_dice", (255, 200, 0), 784),    # yellow
     ("game_halloween", (255, 80, 0), 392),  # pumpkin orange
+    ("game_buddy", (0, 160, 255), 587),   # sky blue (needs the TFT Gizmo)
 ]
 BRIGHTNESS = 0.2
 # ----------------------------------------------------------------------------

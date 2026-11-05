@@ -27,14 +27,17 @@ choices (colors, sounds, names); Josh types the code.
 - Double-tap reset enters the bootloader (green NeoPixels, BOOT drive).
   All-red NeoPixels usually means a USB/cable problem.
 - Never delete files on CIRCUITPY (lib/, boot_out.txt, settings.toml).
-  Only code.py (and project modules) get replaced.
+  Only code.py and project modules get replaced; `deploy.sh --clean` removes
+  only .py/.bmp files whose names exist in this repo.
 - Flashing an Arduino sketch (needed for TensorFlow Lite) overwrites
   CircuitPython. Reinstall by dragging the CircuitPython .uf2 onto the BOOT drive.
 
 ## Repo layout
 circuit-playground-projects/
   CLAUDE.md, README.md
-  deploy.sh              # deploy.sh <NN|name|launcher>; also copies shared/*.py
+  deploy.sh              # deploy.sh <NN|name|launcher|list> [--clean]
+                         # copies shared/*.py + the project's .py/.bmp;
+                         # --clean removes other repo files from the board
   deploy.cmd             # same, from PowerShell: .\deploy 01
   shared/common.py       # pressed(), wants_exit(), exit_held(), beep()
   launcher/code.py       # menu; GAMES list of (module, color, tone)
@@ -93,6 +96,10 @@ First evening: wand, fruit piano, dice.
 
 ## Open items
 - Piano and Halloween use TX and A3 for touch; skip them when the Gizmo is on.
+- Buddy (05) phase 2: swap the shape face for the kid's drawing (240x240
+  indexed BMP via Pillow, OnDiskBitmap; pupils and lids drawn on top).
+- Buddy: check tilt directions (LOOK_FLIP_X/Y), LOUD_LEVEL and sleep with
+  the board in hand.
 - Check pad/touch labels on the Bluefruit silkscreen.
 - Check 3D-printed case fit: the Adafruit case STLs were made for the
   Express/Classic, not the Bluefruit.

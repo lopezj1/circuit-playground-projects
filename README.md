@@ -59,8 +59,21 @@ To work on one game by itself, deploy it by number or name instead:
 
 From PowerShell (including the Claude desktop app's Terminal panel), use
 `.\deploy launcher` or `.\deploy 01`. `deploy.cmd` runs `deploy.sh` through
-Git Bash. The script only writes `.py` files and never deletes anything on the
-board.
+Git Bash.
+
+Every game stays in the repo whatever is on the board, so switching is just
+another deploy. Add `--clean` to remove the other games' files from the
+board, so only the one you deployed is there:
+
+```bash
+./deploy.sh 05 --clean      # only the buddy on the board
+./deploy.sh launcher        # back to the menu with every game
+./deploy.sh list            # what can be deployed
+```
+
+Without `--clean`, nothing on the board is deleted. `--clean` only removes
+`.py` and `.bmp` files that come from this repo, never `lib/`, `boot_out.txt`
+or `settings.toml`.
 
 ## Launcher controls
 
@@ -81,6 +94,7 @@ Details and how to add a game: [launcher/README.md](launcher/README.md).
 | 02 | [fruit-piano](projects/02-fruit-piano) | green | Touch pads (or fruit!) play notes |
 | 03 | [dice](projects/03-dice) | yellow | Shake to roll, then count the lights |
 | 04 | [halloween](projects/04-halloween) | pumpkin orange | Spooky jukebox with matching lights; shake for lightning, touch for BOO, cover for eyes |
+| 05 | [buddy](projects/05-buddy) | sky blue | Animated face on the TFT Gizmo: blinks, looks around, gets surprised, falls asleep |
 
 The settings each kid can change (colors, sounds) are at the top of each
 game's `game_*.py`.

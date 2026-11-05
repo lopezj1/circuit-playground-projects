@@ -4,20 +4,47 @@
 #   ./deploy.sh 01            # matches projects/01-*
 #   ./deploy.sh 02-fruit-piano
 #   ./deploy.sh launcher      # menu + every game and its helper files
+#   ./deploy.sh 05 --clean    # also remove other projects' files from the board
+#   ./deploy.sh list          # show what can be deployed
 #
-# shared/*.py (helpers every game imports) is copied every time.
-# Only code.py and project .py modules are written. Nothing on the board is
-# ever deleted (lib/, boot_out.txt, settings.toml stay untouched).
+# shared/*.py (helpers every game imports) is copied every time, along with
+# the project's .py and .bmp files. Without --clean nothing on the board is
+# deleted. --clean only removes .py/.bmp files that come from this repo and
+# aren't part of this deploy; lib/, boot_out.txt and settings.toml are never
+# touched.
 # Set CIRCUITPY to override the board path (default: /d, or /mnt/d on WSL).
 set -euo pipefail
 
 cd "$(dirname "$0")"
 
-if [ $# -ne 1 ]; then
-    echo "usage: ./deploy.sh <project>   (e.g. 01, 02-fruit-piano, launcher)"
-    echo "projects:"
-    ls -1 projects
+list_projects() {
+    echo "  launcher   (menu with every game)"
+    for d in projects/*/; do
+        d=${d%/}
+        echo "  ${d#projects/}"
+    done
+}
+
+clean=no
+target=
+for arg in "$@"; do
+    case "$arg" in
+        --clean) clean=yes ;;
+        *) target=$arg ;;
+    esac
+done
+
+if [ -z "$target" ] || [ $# -gt 2 ]; then
+    echo "usage: ./deploy.sh <project> [--clean]   (e.g. 01, 05-buddy, launcher)"
+    echo "       ./deploy.sh list"
+    list_projects
     exit 1
+fi
+
+if [ "$target" = "list" ]; then
+    echo "Deployable:"
+    list_projects
+    exit 0
 fi
 
 if [ -z "${CIRCUITPY:-}" ]; then
@@ -30,17 +57,17 @@ if [ ! -f "$CIRCUITPY/boot_out.txt" ]; then
     exit 1
 fi
 
-if [ "$1" = "launcher" ]; then
+if [ "$target" = "launcher" ]; then
     src=launcher
 else
-    matches=(projects/"$1"*/)
+    matches=(projects/"$target"*/)
     if [ ! -d "${matches[0]}" ]; then
-        echo "No project matching '$1'. Projects:"
-        ls -1 projects
+        echo "No project matching '$target'. Deployable:"
+        list_projects
         exit 1
     fi
     if [ ${#matches[@]} -gt 1 ]; then
-        echo "'$1' matches more than one project:"
+        echo "'$target' matches more than one project:"
         printf '  %s\n' "${matches[@]}"
         exit 1
     fi
@@ -52,10 +79,11 @@ if [ ! -f "$src/code.py" ]; then
     exit 1
 fi
 
-files=(shared/*.py "$src"/*.py)
+shopt -s nullglob
+files=(shared/*.py "$src"/*.py "$src"/*.bmp)
 if [ "$src" = "launcher" ]; then
     # Every game plus its helper files (like a private halloween_songs.py).
-    files+=(projects/*/*.py)
+    files+=(projects/*/*.py projects/*/*.bmp)
 fi
 
 # code.py goes last: the board restarts as soon as it changes, so every
@@ -68,6 +96,24 @@ for f in "${files[@]}"; do
     cp "$f" "$CIRCUITPY/"
     echo "copied $(basename "$f")"
 done
+
+if [ "$clean" = yes ]; then
+    # Remove files this repo put on the board for other projects. Only names
+    # that exist in the repo are candidates, so nothing else is touched.
+    keep=" code.py "
+    for f in "${files[@]}"; do keep+="$(basename "$f") "; done
+    for f in shared/*.py launcher/*.py projects/*/*.py projects/*/*.bmp; do
+        name=$(basename "$f")
+        case "$name" in *_example.py) continue ;; esac
+        case "$keep" in *" $name "*) continue ;; esac
+        if [ -f "$CIRCUITPY/$name" ]; then
+            rm "$CIRCUITPY/$name"
+            echo "removed $name"
+            keep+="$name "
+        fi
+    done
+fi
+
 cp "$src/code.py" "$CIRCUITPY/"
 echo "copied code.py"
 sync
