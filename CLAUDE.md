@@ -12,7 +12,8 @@ choices (colors, sounds, names); Josh types the code.
   (Git Bash: /d, WSL: /mnt/d).
 - Libraries in lib/ (installed with circup): adafruit_circuitplayground,
   adafruit_lis3dh, adafruit_thermistor, neopixel, adafruit_pixelbuf,
-  adafruit_bus_device.
+  adafruit_bus_device, plus adafruit_gizmo, adafruit_st7789,
+  adafruit_display_text for the TFT Gizmo.
 - Import with: `from adafruit_circuitplayground import cp`
   (do not use the express module).
 - Python 3.13 on Windows. Use Git Bash.
@@ -69,6 +70,16 @@ Build: cardboard pet, flickering jack-o-lantern.
 First evening: wand, fruit piano, dice.
 
 ## TFT Gizmo and animated buddy
+- The Gizmo is attached (screwed on, powered over USB or battery). The screen
+  stays dark until code sets it up:
+  `from adafruit_gizmo import tft_gizmo; display = tft_gizmo.TFT_Gizmo()`
+  (class name has an underscore), then `display.root_group = group`.
+  Libraries: adafruit_gizmo, adafruit_st7789, adafruit_display_text (+ deps).
+  About 90 KB of RAM is free with the display up. Verified working.
+- All 12 screws are needed. Missing 3.3V/GND screws gave a lit but blank
+  screen (the backlight is powered separately).
+- The Gizmo uses SCL, SDA, RX, TX and A3 (backlight). TX and A3 can't be
+  touch pads with it attached; use A1, A2, A4, A5, A6.
 - The kid designs an original hero character on paper (name, colors, mask).
   Scan or photograph it, shrink it to 240x240, and save it as a BMP.
 - Animate by swapping face bitmaps: blink on a timer, eyes follow tilt,
@@ -81,7 +92,7 @@ First evening: wand, fruit piano, dice.
 - Custom motion classifier trained on Josh's own data. Models must be tiny.
 
 ## Open items
-- Verify the Gizmo's CircuitPython library works with the Bluefruit.
+- Piano and Halloween use TX and A3 for touch; skip them when the Gizmo is on.
 - Check pad/touch labels on the Bluefruit silkscreen.
 - Check 3D-printed case fit: the Adafruit case STLs were made for the
   Express/Classic, not the Bluefruit.
