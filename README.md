@@ -104,6 +104,7 @@ game's `game_*.py`.
 ```
 deploy.sh / deploy.cmd     copy code to the board (Git Bash / PowerShell)
 shared/common.py           buttons, sound and menu-exit helpers for all games
+tools/make_face.py         turn a picture into the buddy's face (uv run)
 launcher/code.py           the game menu
 projects/NN-name/
   game_name.py             the game, with the kid's settings at the top

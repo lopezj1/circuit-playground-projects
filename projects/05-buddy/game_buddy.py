@@ -9,11 +9,14 @@
 # A+B:             back to the menu (in the launcher)
 # Slide switch:    sound on / off
 #
-# The face is drawn with shapes for now. Later the kid's own drawing can
-# replace it.
+# The face is the hero picture (hero.bmp + hero_face.py, made by
+# tools/make_face.py) with pupils and eyelids drawn on top. Without a
+# picture, a face made of shapes is drawn instead.
 import math
 import random
 import time
+import board
+import busio
 import displayio
 import terminalio
 import vectorio
@@ -23,8 +26,11 @@ from adafruit_circuitplayground import cp
 import common
 
 # ---- Kid's choices ---------------------------------------------------------
-NAME = "Buddy"
-HERO_COLOR = 0x00A0FF       # face and lights
+NAME = "Spin"
+USE_PICTURE = True          # False = the shape face, even with a picture
+PICTURE_PUPILS = False      # pupils inside the picture's eyes
+HERO_COLOR = 0x00A0FF       # shape face color
+LIGHT_COLOR = None          # lights; None = match the face
 BACKGROUND = 0x000000       # around the face
 PUPIL_COLOR = 0x000000
 MOUTH_COLOR = 0x300010
@@ -39,6 +45,11 @@ LOOK_FLIP_X = False         # eyes look the wrong way left/right? set True
 LOOK_FLIP_Y = False         # eyes look the wrong way up/down? set True
 BRIGHTNESS = 0.2            # lights
 # ----------------------------------------------------------------------------
+
+try:
+    import hero_face
+except ImportError:
+    hero_face = None
 
 EYES = ((80, 95), (160, 95))
 EYE_SIZE = 26
@@ -77,7 +88,9 @@ def brow(x, y, tilt):
             (x + 28, y - tilt + 7), (x - 28, y + tilt + 7)]
 
 
-class Face:
+class ShapeFace:
+    """A face drawn with circles and polygons."""
+
     def __init__(self):
         self.root = displayio.Group()
         face_paint = paint(HERO_COLOR)
@@ -187,6 +200,155 @@ class Face:
         self.words.hidden = not text
 
 
+def clip(points, keep):
+    """The part of a polygon where keep(x, y) >= 0, cut along a line."""
+    out = []
+    for i in range(len(points)):
+        ax, ay = points[i - 1]
+        bx, by = points[i]
+        ka = keep(ax, ay)
+        kb = keep(bx, by)
+        if ka >= 0:
+            out.append((ax, ay))
+        if (ka >= 0) != (kb >= 0):
+            t = ka / (ka - kb)
+            out.append((round(ax + (bx - ax) * t), round(ay + (by - ay) * t)))
+    return out
+
+
+# Eyelids for each mood, per eye: (top lid, slope, squeeze). The top lid
+# goes from 0 (open) to 1 (down to the bottom); slope tilts it, flipped for
+# the right eye so both eyes match. Squeeze closes the eye from every side
+# toward its middle: 0 = open, 1 = shut.
+PICTURE_MOODS = {
+    "happy": (0, 0, 0.4),
+    "silly": None,                  # wink, see lids_for()
+    "sad": (0.3, -0.5, 0),
+    "angry": (0.35, 0.7, 0.15),
+    "sleep": (0, 0, 1),
+    "open": (0, 0, 0),
+}
+
+
+def ring(outline, center, squeeze):
+    """The eye outline with a smaller copy cut out of the middle: a lid that
+    closes from every side. Drawn as one polygon that goes around the
+    outside, then back around the hole the other way."""
+    if squeeze >= 1:
+        return outline
+    k = 1 - squeeze
+    cx, cy = center
+    inner = [(round(cx + (x - cx) * k), round(cy + (y - cy) * k))
+             for x, y in outline]
+    return outline + [outline[0]] + [inner[0]] + inner[::-1] + [inner[0]]
+
+
+class PictureFace:
+    """The hero picture, with pupils and eyelids drawn on top."""
+
+    def __init__(self):
+        self.root = displayio.Group()
+        path = "/" + hero_face.IMAGE
+        try:
+            # In memory, the screen redraws much faster than from the file.
+            import adafruit_imageload
+            picture, colors = adafruit_imageload.load(
+                path, bitmap=displayio.Bitmap, palette=displayio.Palette)
+        except (ImportError, MemoryError):
+            picture = displayio.OnDiskBitmap(path)
+            colors = picture.pixel_shader
+        self.root.append(displayio.TileGrid(picture, pixel_shader=colors))
+        self.eyes = hero_face.EYES
+        lid_paint = paint(hero_face.LID_COLOR)
+        black = paint(PUPIL_COLOR)
+        self.pupils = []
+        self.top_lids = []
+        self.rings = []
+        hidden = [(0, 0), (0, 0), (0, 0)]
+        for eye in self.eyes:
+            x, y = eye["center"]
+            p = vectorio.Circle(pixel_shader=black, radius=9, x=x, y=y)
+            p.hidden = not PICTURE_PUPILS
+            top = vectorio.Polygon(pixel_shader=lid_paint, points=hidden, x=0, y=0)
+            squeeze = vectorio.Polygon(pixel_shader=lid_paint, points=hidden, x=0, y=0)
+            self.root.append(p)
+            self.root.append(top)
+            self.root.append(squeeze)
+            self.pupils.append(p)
+            self.top_lids.append(top)
+            self.rings.append(squeeze)
+        self.zzz = label.Label(terminalio.FONT, text="Z z z", color=0xFFFFFF,
+                               scale=3, x=140, y=28)
+        self.root.append(self.zzz)
+        self.words = label.Label(terminalio.FONT, text=" ", color=0x000000,
+                                 background_color=0xFFFFFF, scale=2,
+                                 anchor_point=(0.5, 1.0),
+                                 anchored_position=(120, 236))
+        self.root.append(self.words)
+        self.current = "open"
+        self.shown = None
+        self.set_lids("open")
+        self.say("")
+
+    def lids_for(self, name, i):
+        if name == "silly":
+            return (0, 0, 1) if i == 0 else (0, 0, 0.25)
+        top, slope, squeeze = PICTURE_MOODS[name]
+        return top, slope if i == 0 else -slope, squeeze
+
+    def set_lids(self, name):
+        if name == self.shown:
+            return
+        self.shown = name
+        for i, eye in enumerate(self.eyes):
+            top, slope, squeeze = self.lids_for(name, i)
+            cx = eye["center"][0]
+            height = eye["bottom"] - eye["top"]
+            outline = eye["outline"]
+            if top >= 1:
+                top_shape = outline
+            elif top > 0:
+                cut = eye["top"] + top * height
+                top_shape = clip(outline, lambda x, y: cut + slope * (x - cx) - y)
+            else:
+                top_shape = []
+            squeeze_shape = ring(outline, eye["center"], squeeze) if squeeze > 0 else []
+            for lid, shape in ((self.top_lids[i], top_shape),
+                               (self.rings[i], squeeze_shape)):
+                if len(shape) >= 3:
+                    lid.points = shape
+                    lid.hidden = False
+                else:
+                    lid.hidden = True
+
+    def look(self, dx, dy):
+        if not PICTURE_PUPILS:
+            return                  # nothing to move, so nothing to redraw
+        for eye, p in zip(self.eyes, self.pupils):
+            room = eye["room"] - p.radius - 3
+            x, y = eye["center"]
+            p.x = x + int(max(-room, min(room, dx * 1.4)))
+            p.y = y + int(max(-room, min(room, dy * 1.4)))
+
+    def eyes_wide(self, wide):
+        for p in self.pupils:
+            p.radius = 6 if wide else 9
+
+    def lids_closed(self, amount):
+        self.set_lids("sleep" if amount else self.current)
+
+    def mood(self, name):
+        self.current = name if name in PICTURE_MOODS else "open"
+        self.set_lids(self.current)
+
+    def surprised(self):
+        self.set_lids("open")
+
+    def say(self, text):
+        self.words.text = text if text else " "
+        self.words.hidden = not text
+
+
 def boing():
     for f in range(300, 1000, 70):
         common.beep(f, 0.02)
@@ -209,23 +371,30 @@ def say_hi(face, display):
 
 
 def run():
-    hero = rgb(HERO_COLOR)
+    picture = USE_PICTURE and hero_face is not None
+    if LIGHT_COLOR is not None:
+        hero = rgb(LIGHT_COLOR)
+    else:
+        hero = rgb(hero_face.LID_COLOR if picture else HERO_COLOR)
     cp.pixels.brightness = BRIGHTNESS
     cp.pixels.auto_write = False
     random.seed(int(time.monotonic() * 1000))
 
+    # Our own SPI bus: release_displays() doesn't free one the Gizmo library
+    # makes, so the next start (from the launcher) would fail "A4 in use".
     displayio.release_displays()
-    display = tft_gizmo.TFT_Gizmo()
-    display.auto_refresh = False
-    face = Face()
-    display.root_group = face.root
-
+    spi = busio.SPI(board.SCL, MOSI=board.SDA)
+    display = tft_gizmo.TFT_Gizmo(spi=spi)
     try:
+        display.auto_refresh = False
+        face = PictureFace() if picture else ShapeFace()
+        display.root_group = face.root
         play(face, display, hero)
     finally:
         display.brightness = 0
         display.root_group = None
         displayio.release_displays()
+        spi.deinit()
 
 
 def play(face, display, hero):

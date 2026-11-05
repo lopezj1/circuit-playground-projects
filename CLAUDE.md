@@ -13,7 +13,7 @@ choices (colors, sounds, names); Josh types the code.
 - Libraries in lib/ (installed with circup): adafruit_circuitplayground,
   adafruit_lis3dh, adafruit_thermistor, neopixel, adafruit_pixelbuf,
   adafruit_bus_device, plus adafruit_gizmo, adafruit_st7789,
-  adafruit_display_text for the TFT Gizmo.
+  adafruit_display_text, adafruit_imageload for the TFT Gizmo.
 - Import with: `from adafruit_circuitplayground import cp`
   (do not use the express module).
 - Python 3.13 on Windows. Use Git Bash.
@@ -42,6 +42,7 @@ circuit-playground-projects/
   shared/common.py       # pressed(), wants_exit(), exit_held(), beep()
   launcher/code.py       # menu; GAMES list of (module, color, tone)
   projects/NN-name/game_name.py + code.py + README.md
+  tools/make_face.py     # picture -> buddy face (uv run)
 Each game lives once, in projects/NN-name/game_name.py, with a run() that
 returns on A+B (common.wants_exit). code.py there just runs it standalone;
 `deploy.sh launcher` copies every projects/*/*.py except code.py and
@@ -81,8 +82,15 @@ First evening: wand, fruit piano, dice.
   About 90 KB of RAM is free with the display up. Verified working.
 - All 12 screws are needed. Missing 3.3V/GND screws gave a lit but blank
   screen (the backlight is powered separately).
-- The Gizmo uses SCL, SDA, RX, TX and A3 (backlight). TX and A3 can't be
-  touch pads with it attached; use A1, A2, A4, A5, A6.
+- The Gizmo uses A3 (backlight), A4 (SCL), A5 (SDA), A6 (RX) and TX. Only
+  A1 and A2 can be touch pads with it attached.
+- Make the SPI bus yourself (`busio.SPI(board.SCL, MOSI=board.SDA)`, pass
+  `spi=`) and deinit it after release_displays(): otherwise the next
+  TFT_Gizmo() fails with "A4 in use".
+- Pictures: `uv run tools/make_face.py <image>` (Pillow via uv) writes
+  projects/05-buddy/hero.bmp + hero_face.py (eye outlines). Both are
+  gitignored, like halloween_songs.py: the current hero is a licensed
+  character. Loaded into RAM with adafruit_imageload (about 50 KB free).
 - The kid designs an original hero character on paper (name, colors, mask).
   Scan or photograph it, shrink it to 240x240, and save it as a BMP.
 - Animate by swapping face bitmaps: blink on a timer, eyes follow tilt,
@@ -95,9 +103,8 @@ First evening: wand, fruit piano, dice.
 - Custom motion classifier trained on Josh's own data. Models must be tiny.
 
 ## Open items
-- Piano and Halloween use TX and A3 for touch; skip them when the Gizmo is on.
-- Buddy (05) phase 2: swap the shape face for the kid's drawing (240x240
-  indexed BMP via Pillow, OnDiskBitmap; pupils and lids drawn on top).
+- Piano and Halloween use A3-A6 and TX for touch; with the Gizmo on, only
+  A1 and A2 work.
 - Buddy: check tilt directions (LOOK_FLIP_X/Y), LOUD_LEVEL and sleep with
   the board in hand.
 - Check pad/touch labels on the Bluefruit silkscreen.

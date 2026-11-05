@@ -5,3 +5,9 @@ __pycache__/
 
 # Private song files: may hold copyrighted melodies, never publish them.
 halloween_songs.py
+
+# Private hero pictures for the buddy: may be a character you don't own.
+projects/05-buddy/hero.bmp
+projects/05-buddy/hero_face.py
+projects/05-buddy/hero_source.*
+projects/05-buddy/hero_preview.png
