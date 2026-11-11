@@ -4,8 +4,10 @@
 # Tilt:            eyes look around
 # Shake, or a loud noise: surprised!
 # Cover the light sensor (the side with the lights): falls asleep
-# A:               next mood (happy, silly, sad, angry)
-# B:               says hi
+# A:               next face (happy, silly, sad, angry)
+# B:               next color scheme
+# Touch pad A1:    says hi
+# A or B while it's asleep: wakes it up
 # A+B:             back to the menu (in the launcher)
 # Slide switch:    sound on / off
 #
@@ -31,6 +33,18 @@ USE_PICTURE = True          # False = the shape face, even with a picture
 PICTURE_PUPILS = False      # pupils inside the picture's eyes
 HERO_COLOR = 0x00A0FF       # shape face color
 LIGHT_COLOR = None          # lights; None = match the face
+# B goes through these. None = the picture's own colors. A scheme recolors
+# parts of the picture: "face", "frame" (around the eyes, and the eyelids),
+# "line" (thin line around the eyes), "ring" (the border), "lens" (the
+# eyes). Leave a part out to keep its color. "lights" is the lights' color.
+COLOR_SCHEMES = [
+    None,
+    {"face": 0xF2F0F4, "frame": 0x531B4B, "line": 0xE0489A,     # white
+     "ring": 0xE0489A, "lights": 0xE0489A},                     # and pink
+    {"face": 0xCE2D37, "frame": 0x1A0E10, "line": 0x1A0E10,     # red, black
+     "ring": 0x1E3A8A, "lights": 0xCE2D37},                     # around eyes
+]
+SHAPE_COLORS = [HERO_COLOR, 0xE0489A, 0xCE2D37]   # B on the shape face
 BACKGROUND = 0x000000       # around the face
 PUPIL_COLOR = 0x000000
 MOUTH_COLOR = 0x300010
@@ -40,7 +54,9 @@ HI_SONG = [(523, 0.1), (659, 0.1), (784, 0.1), (1047, 0.2)]
 BLINK_EVERY = 4             # seconds, about
 SHAKE_STRENGTH = 25         # higher = harder shake needed (resting is ~10)
 LOUD_LEVEL = 400            # higher = louder noise needed (quiet room ~20)
-DARK_FRACTION = 0.3         # "dark" = under 30% of the brightest light seen
+SLEEP_IN_DARK = True        # False = never falls asleep
+DARK_FRACTION = 0.2         # "dark" = under 20% of the room's light
+DARK_SECONDS = 2            # how long it has to stay dark first
 LOOK_FLIP_X = False         # eyes look the wrong way left/right? set True
 LOOK_FLIP_Y = False         # eyes look the wrong way up/down? set True
 BRIGHTNESS = 0.2            # lights
@@ -94,6 +110,8 @@ class ShapeFace:
     def __init__(self):
         self.root = displayio.Group()
         face_paint = paint(HERO_COLOR)
+        self.face_paint = face_paint
+        self.schemes = len(SHAPE_COLORS)
         self.root.append(vectorio.Rectangle(
             pixel_shader=paint(BACKGROUND), width=240, height=240, x=0, y=0))
         self.root.append(vectorio.Circle(
@@ -199,6 +217,11 @@ class ShapeFace:
         self.words.text = text if text else " "
         self.words.hidden = not text
 
+    def set_scheme(self, i):
+        """Recolor the face; returns the lights' color."""
+        self.face_paint[0] = SHAPE_COLORS[i]
+        return rgb(LIGHT_COLOR if LIGHT_COLOR is not None else SHAPE_COLORS[i])
+
 
 def clip(points, keep):
     """The part of a polygon where keep(x, y) >= 0, cut along a line."""
@@ -258,8 +281,13 @@ class PictureFace:
             picture = displayio.OnDiskBitmap(path)
             colors = picture.pixel_shader
         self.root.append(displayio.TileGrid(picture, pixel_shader=colors))
+        self.colors = colors
+        self.original = [colors[i] for i in range(len(colors))]
+        self.roles = getattr(hero_face, "ROLES", [])
+        self.schemes = len(COLOR_SCHEMES)
         self.eyes = hero_face.EYES
         lid_paint = paint(hero_face.LID_COLOR)
+        self.lid_paint = lid_paint
         black = paint(PUPIL_COLOR)
         self.pupils = []
         self.top_lids = []
@@ -344,6 +372,16 @@ class PictureFace:
     def surprised(self):
         self.set_lids("open")
 
+    def set_scheme(self, i):
+        """Recolor the picture; returns the lights' color."""
+        scheme = COLOR_SCHEMES[i] or {}
+        for n, role in enumerate(self.roles[:len(self.original)]):
+            self.colors[n] = scheme.get(role, self.original[n])
+        self.lid_paint[0] = scheme.get("frame", hero_face.LID_COLOR)
+        if LIGHT_COLOR is not None:
+            return rgb(LIGHT_COLOR)
+        return rgb(scheme.get("lights", scheme.get("frame", hero_face.LID_COLOR)))
+
     def say(self, text):
         self.words.text = text if text else " "
         self.words.hidden = not text
@@ -354,12 +392,11 @@ def boing():
         common.beep(f, 0.02)
 
 
-def say_hi(face, display):
+def say_hi(face, display, hero):
     face.say("Hi, I'm " + NAME + "!")
     face.mood("happy")
     face.look(0, 0)
     display.refresh()
-    hero = rgb(HERO_COLOR)
     for i, (freq, seconds) in enumerate(HI_SONG):
         cp.pixels.fill(0)
         for p in range(i, 10, len(HI_SONG)):
@@ -372,10 +409,6 @@ def say_hi(face, display):
 
 def run():
     picture = USE_PICTURE and hero_face is not None
-    if LIGHT_COLOR is not None:
-        hero = rgb(LIGHT_COLOR)
-    else:
-        hero = rgb(hero_face.LID_COLOR if picture else HERO_COLOR)
     cp.pixels.brightness = BRIGHTNESS
     cp.pixels.auto_write = False
     random.seed(int(time.monotonic() * 1000))
@@ -389,7 +422,7 @@ def run():
         display.auto_refresh = False
         face = PictureFace() if picture else ShapeFace()
         display.root_group = face.root
-        play(face, display, hero)
+        play(face, display)
     finally:
         display.brightness = 0
         display.root_group = None
@@ -397,16 +430,20 @@ def run():
         spi.deinit()
 
 
-def play(face, display, hero):
+def play(face, display):
     mood = 0
+    scheme = 0
+    hero = face.set_scheme(scheme)
     state = "awake"             # awake, surprised, asleep
     state_until = 0
     face.mood(MOODS[mood])
     look_x = look_y = 0.0
     next_blink = time.monotonic() + BLINK_EVERY
     next_sense = 0
-    light = brightest = max(1, cp.light)
+    light = room = max(1, cp.light)
     dark_since = None
+    stay_awake_until = 0
+    last_hi = 0
 
     while True:
         now = time.monotonic()
@@ -414,15 +451,24 @@ def play(face, display, hero):
         if common.wants_exit(button):
             cp.stop_tone()
             return
-        if button == "A" and state != "asleep":
+        if button in ("A", "B") and state == "asleep":
+            button = None               # the press just wakes it up
+            dark_since = None
+            stay_awake_until = now + 10
+        if button == "A":
             mood = (mood + 1) % len(MOODS)
             face.mood(MOODS[mood])
             common.beep(440 + mood * 110, 0.08)
-        elif button == "B" and state != "asleep":
-            say_hi(face, display)
+        elif button == "B":
+            scheme = (scheme + 1) % face.schemes
+            hero = face.set_scheme(scheme)
+            common.beep(660 + scheme * 110, 0.08)
+        elif state != "asleep" and now - last_hi > 1 and cp.touch_A1:
+            say_hi(face, display, hero)
             face.say("")
             face.mood(MOODS[mood])
             state = "awake"
+            last_hi = time.monotonic()
 
         # Sensors, ten times a second.
         startle = False
@@ -434,8 +480,12 @@ def play(face, display, hero):
             elif state != "surprised" and cp.sound_level > LOUD_LEVEL:
                 startle = True
             light = light * 0.7 + cp.light * 0.3
-            brightest = max(brightest * 0.9995, light, 1)
-            if light < brightest * DARK_FRACTION:
+            if state != "asleep":
+                # The room's light: follows the brightest recent light,
+                # slowly forgetting it, so a dimmer room becomes normal.
+                room = max(room * 0.998, light, 1)
+            if (SLEEP_IN_DARK and light < room * DARK_FRACTION
+                    and now > stay_awake_until):
                 dark_since = dark_since or now
             else:
                 dark_since = None
@@ -461,7 +511,7 @@ def play(face, display, hero):
             face.eyes_wide(False)
             face.mood(MOODS[mood])
             face.say("")
-        elif state == "awake" and dark_since and now - dark_since > 0.5:
+        elif state == "awake" and dark_since and now - dark_since > DARK_SECONDS:
             state = "asleep"
             face.mood("sleep")
             face.lids_closed(1)

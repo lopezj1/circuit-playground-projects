@@ -184,13 +184,35 @@ def main():
                 if inside[x, y] and min(px[x, y]) <= 170 and not is_line(px[x, y]):
                     px[x, y] = e["color"]
 
-    img.quantize(colors=COLORS, method=Image.Quantize.MEDIANCUT).save(OUT / "hero.bmp")
+    small = img.quantize(colors=COLORS, method=Image.Quantize.MEDIANCUT)
+    small.save(OUT / "hero.bmp")
+
+    # Which part of the face each of the picture's colors belongs to, so the
+    # game can swap in other color schemes.
+    pixels = getattr(img, "get_flattened_data", img.getdata)()
+    face = Counter(pixels).most_common(1)[0][0]
+    anchors = {"face": face, "frame": (r, g, b)}
+    palette = small.getpalette()[:COLORS * 3]
+    roles = []
+    for i in range(0, len(palette), 3):
+        c = tuple(palette[i:i + 3])
+        if min(c) > 170:
+            roles.append("lens")
+        elif is_line(c):
+            roles.append("line")
+        elif max(c) - min(c) < 30 and 50 < max(c) <= 170:
+            roles.append("ring")        # a gray border
+        else:
+            roles.append(min(anchors, key=lambda k: sum(
+                (x - y) ** 2 for x, y in zip(c, anchors[k]))))
 
     lines = [
         "# Made by tools/make_face.py from the hero picture. PRIVATE: gitignored.",
         "# Where the eyes are in hero.bmp, so the game can draw pupils and lids.",
         'IMAGE = "hero.bmp"',
         "LID_COLOR = 0x%06X" % lid,
+        "# The part of the face each color in hero.bmp's palette belongs to.",
+        "ROLES = %r" % (roles,),
         "EYES = [",
     ]
     for e in eyes:
@@ -212,6 +234,10 @@ def main():
         print("eye %d: center %s, %d to %d tall, room %d, %d outline points"
               % (i + 1, e["center"], e["top"], e["bottom"], e["room"], len(e["outline"])))
     print("eyelid color 0x%06X" % lid)
+    for role in ("face", "frame", "line", "lens", "ring"):
+        print("%-6s %s" % (role, " ".join(
+            "#%02x%02x%02x" % tuple(palette[i * 3:i * 3 + 3])
+            for i, x in enumerate(roles) if x == role)))
     print("wrote hero.bmp, hero_face.py, hero_preview.png in", OUT)
 
 
