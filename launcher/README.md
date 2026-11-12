@@ -24,6 +24,7 @@ shared helper and every `projects/*/game_*.py`.
 | 3 | [Dice](../projects/03-dice) | yellow |
 | 4 | [Halloween](../projects/04-halloween) | pumpkin orange |
 | 5 | [Buddy](../projects/05-buddy) | sky blue (needs the TFT Gizmo) |
+| 6 | [Pet](../projects/06-pet) | gold (needs the TFT Gizmo) |
 
 If a game crashes, the board flashes red, beeps low, and returns to the menu.
 The error is printed to the serial console.

@@ -95,6 +95,7 @@ Details and how to add a game: [launcher/README.md](launcher/README.md).
 | 03 | [dice](projects/03-dice) | yellow | Shake to roll, then count the lights |
 | 04 | [halloween](projects/04-halloween) | pumpkin orange | Spooky jukebox with matching lights; shake for lightning, touch for BOO, cover for eyes |
 | 05 | [buddy](projects/05-buddy) | sky blue | Animated face on the TFT Gizmo: blinks, looks around, gets surprised, falls asleep |
+| 06 | [pet](projects/06-pet) | gold | Tamagotchi-style pixel pet on the TFT Gizmo: walks, eats, cheers, cries, sleeps |
 
 The settings each kid can change (colors, sounds) are at the top of each
 game's `game_*.py`.

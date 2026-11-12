@@ -97,6 +97,14 @@ First evening: wand, fruit piano, dice.
   surprised on shake or loud noise, sleeps when the light sensor is covered.
 - Button A cycles moods. NeoPixels glow in the hero's color.
 
+## Pet (06-pet, Tamagotchi plan in GitHub issue #2)
+- Sprite pet: 24x24 frames in one row of pet_sprites.bmp (palette index 0
+  transparent), drawn 6x with a TileGrid; each mood is a 2-frame loop.
+  FRAMES in game_pet.py lists the frame order.
+- tools/pet_frames.py draws the frames as ASCII art from a licensed
+  character, so it and pet_sprites.bmp are gitignored. An original pet the
+  kid draws (same frames) can be committed.
+
 ## Later: TensorFlow Lite (Arduino, separate sketch)
 - Magic-wand gesture recognition from the accelerometer.
 - Keyword spotting from the microphone ("yes", "no", "go", "stop").

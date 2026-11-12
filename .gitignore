@@ -11,3 +11,8 @@ projects/05-buddy/hero.bmp
 projects/05-buddy/hero_face.py
 projects/05-buddy/hero_source.*
 projects/05-buddy/hero_preview.png
+
+# Private pet sprites: drawn from a character you don't own.
+tools/pet_frames.py
+projects/06-pet/pet_sprites.bmp
+projects/06-pet/pet_preview.png
