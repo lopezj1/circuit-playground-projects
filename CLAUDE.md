@@ -104,6 +104,11 @@ First evening: wand, fruit piano, dice.
 - tools/pet_frames.py draws the frames as ASCII art from a licensed
   character, so it and pet_sprites.bmp are gitignored. An original pet the
   kid draws (same frames) can be committed.
+- Needs (food, love, sleep 0-100, sick, poop, suit color) are saved in
+  microcontroller.nvm (bytes 0-9, magic b"PET1"): writable from code even
+  with USB connected, unlike the filesystem. Saved every SAVE_MINUTES and
+  on exit. Read it with bytes(nvm[0:n]); struct.unpack_from can't read nvm
+  directly. TIME_SPEED speeds everything up for testing.
 
 ## Later: TensorFlow Lite (Arduino, separate sketch)
 - Magic-wand gesture recognition from the accelerometer.
